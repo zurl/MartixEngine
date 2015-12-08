@@ -94,27 +94,29 @@ public:
 		return os.str();
 	}
 	bool operator>(const Frac &t)const{
-		return x*t.y>y*t.x;
+		return x*t.y > y*t.x;
 	}
 	bool operator<(const Frac &t)const{
-		return x*t.y<y*t.x;
+		return x*t.y < y*t.x;
 	}
 	bool operator>=(const Frac &t)const{
-		return x*t.y>=y*t.x;
+		return x*t.y >= y*t.x;
 	}
 	bool operator<=(const Frac &t)const{
-		return x*t.y<=y*t.x;
+		return x*t.y <= y*t.x;
 	}
 	bool operator==(const Frac &t)const{
-		return (x==t.x)&&(y==t.y);
+		return (x == t.x) && (y == t.y);
 	}
 	bool operator!=(const Frac &t)const{
-		return (x != t.x)||(y != t.y);
+		return (x != t.x) || (y != t.y);
 	}
 };
 istream &operator>>(istream &is, Frac &f){
-	int x, y;
-	is >> x >> y;
+	int x, y = 1; char c;
+	is >> x;
+	is.get(c);
+	if (c == '/')is >> y;
 	f = { x, y };
 	return is;
 }
@@ -128,7 +130,7 @@ Frac abs(const Frac &t){
 template<typename T>
 class Martix{
 private:
-	void throwError(unsigned code){
+	void throwError(unsigned code)const{
 		switch (code){
 		case 0:
 			cout << "Error : Invaild calculate : Operand martix size mismatch ( Code : #0 ) " << endl;
@@ -136,7 +138,11 @@ private:
 		case 1:
 			cout << "Error : Reserved Error ( Code : #1 ) " << endl;
 			break;
+		case 4:
+			cout << "Error : Invaild arguments ( Code : #4 ) " << endl;
+			break;
 		}
+
 	}
 public:
 	vector<vector<T>> v;
@@ -148,20 +154,20 @@ public:
 	Martix(unsigned n, unsigned m){
 		v = vector<vector<T>>(n, vector<T>(m));
 	}
-	inline unsigned getColumnSize(){
+	inline unsigned getColumnSize()const{
 		return v.size();
 	}
-	inline unsigned getRowSize(){
+	inline unsigned getRowSize()const{
 		if (getColumnSize() == 0)return 0;
 		else return v[0].size();
 	}
-	inline Martix<T> _lineRender(const Martix<T> &t, Martix<T> &(*f)(const T &a, const T &b)){
+	inline Martix<T> _lineRender(const Martix<T> &t, T (f)(const T &a, const T &b))const{
 		if (getColumnSize() == t.getColumnSize()){
 			if (getRowSize() == t.getRowSize()){
 				Martix<T> ret(getColumnSize(), getRowSize());
-				for (unsigned i = 0; i <= getColumnSize()-1; i++){
-					for (unsigned j = 0; j <= getRowSize()-1; j++){
-						ret[i][j] = f(v[i][j],t.v[i][j]);
+				for (unsigned i = 0; i <= getColumnSize() - 1; i++){
+					for (unsigned j = 0; j <= getRowSize() - 1; j++){
+						ret.v[i][j] = f(v[i][j], t.v[i][j]);
 					}
 				}
 				return ret;
@@ -176,13 +182,13 @@ public:
 			return *this;
 		}
 	}
-	inline Martix<T> _mulRender(const Martix<T> &t, Martix<T> &(*f)(const T &a, const T &b)){
+	inline Martix<T> _mulRender(const Martix<T> &t,T (f)(const T &a, const T &b))const{
 		if (getRowSize() == t.getColumnSize()){
 			Martix<T> ret(getColumnSize(), t.getRowSize());
-			for (unsigned i = 0; i <= getColumnSize()-1; i++){
-				for (unsigned j = 0; j <= t.getRowSize()-1; j++){
-					for (unsigned k = 0; k <= t.getRowSize()-1; k++){
-						ret[i][j] += f(v[i][k], t.v[k][j]);
+			for (unsigned i = 0; i <= getColumnSize() - 1; i++){
+				for (unsigned j = 0; j <= t.getRowSize() - 1; j++){
+					for (unsigned k = 0; k <= t.getRowSize() - 1; k++){
+						ret.v[i][j] += f(v[i][k], t.v[k][j]);
 					}
 				}
 			}
@@ -194,17 +200,17 @@ public:
 		}
 	}
 	Martix<T> operator+(const Martix<T> &t)const{
-		return _lineRender(*this, t, [](const T &a, const T &b){
+		return _lineRender( t, [](const T &a, const T &b){
 			return a + b;
 		});
 	}
 	Martix<T> operator-(const Martix<T> &t)const{
-		return _lineRender(*this, t, [](const T &a, const T &b){
+		return this->_lineRender(t, [](const T &a, const T &b){
 			return a - b;
 		});
 	}
 	Martix<T> operator*(const Martix<T> &t)const{
-		return _mulRender(*this, t, [](const T &a, const T &b){
+		return this->_mulRender( t, [](const T &a, const T &b){
 			return a * b;
 		});
 	}
@@ -220,77 +226,173 @@ public:
 		*this = *this * t;
 		return *this;
 	}
+	Martix<T> operator&(const Martix<T> &t)const{
+		if (getRowSize() != t.getRowSize()){
+			throwError(0);
+			return 0;
+		}
+		else{
+			Martix ret;
+			for (unsigned i = 0; i <= getColumnSize() - 1; i++){
+				ret.v.emplace_back(vector<T>());
+				for (auto &x : v[i])ret.v[i].emplace_back(x);
+				for (auto &x : t.v[i])ret.v[i].emplace_back(x);
+			}
+			return ret;
+		}
+	}
+	Martix<T> operator|(const Martix<T> &t)const{
+		if (getRowSize() != t.getRowSize()){
+			throwError(0);
+			return 0;
+		}
+		else{
+			Martix ret = *this;
+			for (auto &x : t.v){
+				ret.v.emplace_back(x);
+			}
+			return ret;
+		}
+	}
+	Martix<T> &operator&=(const Martix<T> t){
+		return *this & t;
+	}
+	Martix<T> &operator|=(const Martix<T> t){
+		return *this | t;
+	}
 	bool swapColumn(const unsigned &a, const unsigned &b){
 		if (a == b)return 1;
-		for (unsigned i = 0; i <= getRowSize()-1; i++){
+		for (unsigned i = 0; i <= getRowSize() - 1; i++){
 			swap(v[a][i], v[b][i]);
 		}
 		return 1;
 	}
 	bool swapRow(const unsigned &a, const unsigned &b){
 		if (a == b)return 1;
-		for (unsigned i = 0; i <= getColumnSize()-1; i++){
+		for (unsigned i = 0; i <= getColumnSize() - 1; i++){
 			swap(v[i][a], v[i][b]);
 		}
 		return 1;
 	}
 	bool mulColumn(const unsigned &n, const T &t){
 		if (t == 1)return 1;
-		for (unsigned i = 0; i <= getRowSize()-1; i++){
+		for (unsigned i = 0; i <= getRowSize() - 1; i++){
 			v[n][i] *= t;
 		}
 		return 1;
 	}
 	bool mulRow(const unsigned &n, const T &t){
 		if (t == 1)return 1;
-		for (unsigned i = 0; i <= getColumnSize()-1; i++){
-			v[i][n]*= t;
+		for (unsigned i = 0; i <= getColumnSize() - 1; i++){
+			v[i][n] *= t;
 		}
 		return 1;
 	}
 	bool addColumn(const unsigned &a, const unsigned &b, const T &t){
 		if (t == 0)return 1;
-		for (unsigned i = 0; i <= getRowSize()-1; i++){
+		for (unsigned i = 0; i <= getRowSize() - 1; i++){
 			v[b][i] += v[a][i] * t;
 		}
 		return 1;
 	}
 	bool addRow(const unsigned &n, const T &t){
 		if (t == 0)return 1;
-		for (unsigned i = 0; i <= getColumnSize()-1; i++){
+		for (unsigned i = 0; i <= getColumnSize() - 1; i++){
 			v[i][b] += v[i][a] * t;
 		}
 		return 1;
 	}
-	bool toUnit(){
-		
-	}
-	bool simplify(){
+	T simplify(){
 		//preprocessor
-		for (unsigned i = 0; i <= getColumnSize()-1; i++){
+		T ret = 1;
+		for (unsigned i = 0; i <= getColumnSize() - 1; i++){
 			T max = 0;
 			unsigned maxn = 1;
-			for (unsigned j = 0; j <= getColumnSize()-1; j++){
+			for (unsigned j = i; j <= getColumnSize() - 1; j++){
 				if (abs(v[j][i]) > max){
 					max = abs(v[j][i]);
 					maxn = j;
 				}
 			}
 			swapColumn(i, maxn);
+			ret = -ret;
 		}
-		cout << *this ;
-		for (unsigned i = 0; i <= getColumnSize()-1; i++){
+		for (unsigned i = 0; i <= getColumnSize() - 1; i++){
 			if (v[i][i] == 0)continue;
+			ret = ret * v[i][i];
 			mulColumn(i, T(1) / v[i][i]);
-			for (unsigned j = 0; j <= getColumnSize()-1; j++){
+			
+			for (unsigned j = 0; j <= getColumnSize() - 1; j++){
 				if (j == i)continue;
 				if (v[j][i] == 0)continue;
 				T temp = (-v[j][i]) / v[i][i];
 				addColumn(i, j, temp);
 			}
-			cout << *this<<"========="<<endl;
 		}
-		return 1;
+		return ret;
+	}
+	Martix<T> getDivide(const unsigned &ux, const unsigned &uy, const unsigned &dx, const unsigned &dy)const{
+		if (ux < 0 || uy < 0 || dx < 0 || dy < 0 ||
+			ux > dx || uy > dy ||
+			dx >= getColumnSize() || dy >= getRowSize()){
+			throwError(4);
+			return *this;
+		}
+		else{
+			Martix<T> ret;
+			for (unsigned i = ux; i <= dx; i++){
+				ret.v.emplace_back(vector<T>());
+				for (unsigned j = uy; j <= dy; j++){
+					ret.v[i - ux].emplace_back(v[i][j]);
+				}
+			}
+			return ret;
+		}
+	}
+	Martix<T> operator!()const{
+		Martix ret;
+		for (int i = 0; i <= getRowSize() - 1; i++){
+			ret.v.emplace_back(vector<T>());
+			for (int j = 0; j <= getColumn() - 1; j++){
+				ret.v[i].emplace_back(v[j][i]);
+			}
+		}
+		return ret;
+	}
+	Martix<T> operator~()const{
+		if (getColumnSize() != getRowSize()){
+			throwError(0);
+			return *this;
+		}
+		Martix<T> ret((*this)&getUnitMartix<T>(this->getColumnSize()));
+		ret.simplify();
+		//return ret;
+		return ret.getDivide(0, getRowSize(), getColumnSize() - 1, 2 * getRowSize() - 1);
+	}
+	T rank()const{
+		Martix<T> ret = *this;
+		T ans = 0;
+		ret.simplify();
+		for (auto &x : ret.v){
+			bool flag = 0;
+			for (auto &y : x){
+				if (y != 0)flag = 1;
+			}
+			ans += flag;
+		}
+		return ans;
+	}
+	T det()const{
+		if (getColumnSize() != getRowSize()){
+			throwError(0);
+			return 0;
+		}
+		Martix<T> ret = *this;
+		T ans = ret.simplify();
+		for (unsigned i = 0; i <= ret.getColumnSize()-1; i++){
+			ans *= ret.v[i][i];
+		}
+		return ans;
 	}
 };
 template<typename T>
@@ -311,5 +413,13 @@ ostream &operator<<(ostream &os, Martix<T> &t){
 		os << endl;
 	}
 	return os;
+}
+template<typename T>
+Martix<T> getUnitMartix(const unsigned &n){
+	Martix<T> ret(n);
+	for (unsigned i = 0; i <= n - 1; i++){
+		ret.v[i][i] = 1;
+	}
+	return ret;
 }
 #endif
